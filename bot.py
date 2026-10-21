@@ -1,0 +1,72 @@
+import os
+import requests
+from bs4 import BeautifulSoup
+
+TOKEN = "8986862577:AAGI71U8FM-AkNMlyegfoCqIsNRlvL4_xNU"
+CHAT_ID = "@godmofi"
+RECORD_FILE = "sent_pdfs.txt"
+
+def load_sent_pdfs():
+    if not os.path.exists(RECORD_FILE):
+        return set()
+    with open(RECORD_FILE, "r") as f:
+        return set(f.read().splitlines())
+
+def save_sent_pdf(pdf_url):
+    with open(RECORD_FILE, "a") as f:
+        f.write(pdf_url + "\n")
+
+def send_pdf_to_telegram(pdf_url, pdf_name):
+    telegram_url = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
+    
+    caption = (
+        f"🚂 **{pdf_name}** ⚡\n\n"
+        f"📝 Official Notification / Schedule PDF.\n\n"
+        f"🚀 Join @godmofi For Instant Updates"
+    )
+    
+    payload = {
+        'chat_id': CHAT_ID,
+        'document': pdf_url,
+        'caption': caption,
+        'parse_mode': 'Markdown'
+    }
+    
+    try:
+        requests.post(telegram_url, data=payload)
+    except Exception as e:
+        print(f"Telegram Send Error: {e}")
+
+def check_all_websites():
+    if not os.path.exists("urls.txt"):
+        return
+
+    with open("urls.txt", "r") as f:
+        urls = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+
+    sent_pdfs = load_sent_pdfs()
+
+    for target_url in urls:
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = requests.get(target_url, headers=headers, timeout=15)
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if '.pdf' in href.lower():
+                    if not href.startswith('http'):
+                        href = requests.compat.urljoin(target_url, href)
+
+                    if href not in sent_pdfs:
+                        pdf_name = link.text.strip() or "RRB Notification PDF"
+                        pdf_name = pdf_name.replace('\n', ' ').strip()
+                        
+                        send_pdf_to_telegram(href, pdf_name)
+                        save_sent_pdf(href)
+                        sent_pdfs.add(href)
+        except Exception as e:
+            print(f"Error on {target_url}: {e}")
+
+if __name__ == "__main__":
+    check_all_websites()

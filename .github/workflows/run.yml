@@ -1,0 +1,30 @@
+name: RRB PDF Checker
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run script
+        run: python bot.py
+
+      - name: Commit sent records
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Update sent PDFs"
+          file_pattern: sent_pdfs.txt

@@ -6,7 +6,6 @@ TOKEN = "8986862577:AAGI71U8FM-AkNMlyegfoCqIsNRlvL4_xNU"
 CHAT_ID = "@godmofi"
 RECORD_FILE = "sent_pdfs.txt"
 
-# Saare 21 zones aur unke official endpoints ki list
 ZONES = {
     "Thiruvananthapuram": "https://rrb.indianrailways.gov.in/getdata?loc=thiruvananthapuram",
     "Chennai": "https://rrb.indianrailways.gov.in/getdata?loc=chennai",
@@ -43,20 +42,17 @@ def save_sent_pdf(pdf_url):
 
 def send_to_telegram(link_url, link_text, zone_name):
     telegram_url = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
-    
     caption = (
         f"🚨 **RRB {zone_name} Update** 🚂\n\n"
         f"📄 **{link_text}**\n\n"
         f"🚀 Join @godmofi For Instant Updates"
     )
-    
     payload = {
         'chat_id': CHAT_ID,
         'document': link_url,
         'caption': caption,
         'parse_mode': 'Markdown'
     }
-    
     try:
         resp = requests.post(telegram_url, data=payload)
         if resp.status_code != 200:
@@ -75,8 +71,11 @@ def check_all_zones():
 
     for zone_name, target_url in ZONES.items():
         try:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-            response = requests.get(target_url, headers=headers, timeout=25)
+            # Proxy URL bypasses GitHub IP block
+            proxy_url = f"https://api.codetabs.com/v1/proxy?quest={requests.utils.quote(target_url)}"
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            
+            response = requests.get(proxy_url, headers=headers, timeout=25)
             
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')

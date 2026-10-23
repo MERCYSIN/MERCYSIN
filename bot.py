@@ -71,18 +71,31 @@ def check_all_zones():
 
     for zone_name, target_url in ZONES.items():
         try:
-            # Proxy URL bypasses GitHub IP block
             proxy_url = f"https://api.codetabs.com/v1/proxy?quest={requests.utils.quote(target_url)}"
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
             
             response = requests.get(proxy_url, headers=headers, timeout=25)
             
             if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
+                html_content = response.text
+                if response.headers.get('content-type', '').startswith('application/json'):
+                    try:
+                        res_json = response.json()
+                        if isinstance(res_json, dict) and 'contents' in res_json:
+                            html_content = res_json['contents']
+                    except:
+                        pass
 
-                for link in soup.find_all('a', href=True):
+                soup = BeautifulSoup(html_content, 'html.parser')
+                links = soup.find_all('a', href=True)
+                
+                # Yahan print karke dekhenge ki site se kya links mil rahe hain
+                print(f"--- {zone_name}: Total Links Found: {len(links)} ---")
+                
+                for link in links:
                     href = link['href']
                     text = link.text.strip()
+                    print(f"Link: {href} | Text: {text[:30]}") # Debug print
                     
                     if any(kw in href.lower() for kw in ['.pdf', 'examsdocuments', 'getdata', 'image/']):
                         if not href.startswith('http'):

@@ -6,6 +6,31 @@ TOKEN = "8986862577:AAGI71U8FM-AkNMlyegfoCqIsNRlvL4_xNU"
 CHAT_ID = "@godmofi"
 RECORD_FILE = "sent_pdfs.txt"
 
+# Saare 21 zones aur unke official endpoints ki list
+ZONES = {
+    "Thiruvananthapuram": "https://rrb.indianrailways.gov.in/getdata?loc=thiruvananthapuram",
+    "Chennai": "https://rrb.indianrailways.gov.in/getdata?loc=chennai",
+    "Ajmer": "https://rrb.indianrailways.gov.in/getdata?loc=ajmer",
+    "Ahmedabad": "https://rrb.indianrailways.gov.in/getdata?loc=ahmedabad",
+    "Bengaluru": "https://rrb.indianrailways.gov.in/getdata?loc=bengaluru",
+    "Bhopal": "https://rrb.indianrailways.gov.in/getdata?loc=bhopal",
+    "Bhubaneswar": "https://rrb.indianrailways.gov.in/getdata?loc=bhubaneswar",
+    "Bilaspur": "https://rrb.indianrailways.gov.in/getdata?loc=bilaspur",
+    "Chandigarh": "https://rrb.indianrailways.gov.in/getdata?loc=chandigarh",
+    "Gorakhpur": "https://rrb.indianrailways.gov.in/getdata?loc=gorakhpur",
+    "Guwahati": "https://rrb.indianrailways.gov.in/getdata?loc=guwahati",
+    "Jammu": "https://rrb.indianrailways.gov.in/getdata?loc=jammu",
+    "Kolkata": "https://rrb.indianrailways.gov.in/getdata?loc=kolkata",
+    "Malda": "https://rrb.indianrailways.gov.in/getdata?loc=malda",
+    "Mumbai": "https://rrb.indianrailways.gov.in/getdata?loc=mumbai",
+    "Muzaffarpur": "https://rrb.indianrailways.gov.in/getdata?loc=muzaffarpur",
+    "Patna": "https://rrb.indianrailways.gov.in/getdata?loc=patna",
+    "Prayagraj": "https://rrb.indianrailways.gov.in/getdata?loc=prayagraj",
+    "Ranchi": "https://rrb.indianrailways.gov.in/getdata?loc=ranchi",
+    "Secunderabad": "https://rrb.indianrailways.gov.in/getdata?loc=secunderabad",
+    "Siliguri": "https://rrb.indianrailways.gov.in/getdata?loc=siliguri"
+}
+
 def load_sent_pdfs():
     if not os.path.exists(RECORD_FILE):
         return set()
@@ -16,12 +41,12 @@ def save_sent_pdf(pdf_url):
     with open(RECORD_FILE, "a") as f:
         f.write(pdf_url + "\n")
 
-def send_to_telegram(link_url, link_text):
+def send_to_telegram(link_url, link_text, zone_name):
     telegram_url = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
     
     caption = (
-        f"🚂 **{link_text}** ⚡\n\n"
-        f"📝 Official Railway Notification / PDF Update.\n\n"
+        f"🚨 **RRB {zone_name} Update** 🚂\n\n"
+        f"📄 **{link_text}**\n\n"
         f"🚀 Join @godmofi For Instant Updates"
     )
     
@@ -38,30 +63,20 @@ def send_to_telegram(link_url, link_text):
             msg_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
             msg_payload = {
                 'chat_id': CHAT_ID,
-                'text': f"🚂 **{link_text}**\n🔗 Link: {link_url}\n\n🚀 Join @godmofi",
+                'text': f"🚨 **RRB {zone_name} Update**\n📄 {link_text}\n🔗 Link: {link_url}\n\n🚀 Join @godmofi",
                 'parse_mode': 'Markdown'
             }
             requests.post(msg_url, data=msg_payload)
     except Exception as e:
         print(f"Telegram Send Error: {e}")
 
-def check_all_websites():
-    if not os.path.exists("urls.txt"):
-        return
-
-    with open("urls.txt", "r") as f:
-        urls = [line.strip() for line in f if line.strip() and not line.startswith("#")]
-
+def check_all_zones():
     sent_pdfs = load_sent_pdfs()
 
-    for target_url in urls:
+    for zone_name, target_url in ZONES.items():
         try:
-            # Real browser jaisa header diya hai aur timeout 30 second kar diya hai
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-            }
-            response = requests.get(target_url, headers=headers, timeout=30)
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            response = requests.get(target_url, headers=headers, timeout=25)
             
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
@@ -75,16 +90,16 @@ def check_all_websites():
                             href = requests.compat.urljoin(target_url, href)
 
                         if href not in sent_pdfs:
-                            pdf_name = text or "RRB Official Notice PDF"
+                            pdf_name = text or f"RRB {zone_name} Official Notice"
                             pdf_name = pdf_name.replace('\n', ' ').strip()
                             if len(pdf_name) > 80:
                                 pdf_name = pdf_name[:77] + "..."
                             
-                            send_to_telegram(href, pdf_name)
+                            send_to_telegram(href, pdf_name, zone_name)
                             save_sent_pdf(href)
                             sent_pdfs.add(href)
         except Exception as e:
-            print(f"Error on {target_url}: {e}")
+            print(f"Error on {zone_name}: {e}")
 
 if __name__ == "__main__":
-    check_all_websites()
+    check_all_zones()
